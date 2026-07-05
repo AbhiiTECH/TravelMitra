@@ -1,6 +1,86 @@
-# VoyageAI - Intelligent Travel Planner & Itinerary Optimizer
+# TravelMitra - Intelligent Travel Planner & Itinerary Optimizer
 
-VoyageAI is a decoupled full-stack next-generation travel assistant that helps users plan, optimize, and manage trips. It generates complete personalized itineraries using Google Gemini AI, and dynamically adapts schedules in real-time when the traveler reports sudden changes in weather or budget limits.
+TravelMitra is a decoupled full-stack next-generation travel assistant that helps users plan, optimize, and manage trips. It generates complete personalized itineraries using Google Gemini AI, and dynamically adapts schedules in real-time when the traveler reports sudden changes in weather or budget limits.
+
+---
+
+## System Architecture & User Flows
+
+### System Architecture Diagram
+```mermaid
+graph TD
+    %% Define styles
+    classDef primary fill:#6366f1,stroke:#4f46e5,stroke-width:2px,color:#fff;
+    classDef secondary fill:#a855f7,stroke:#9333ea,stroke-width:2px,color:#fff;
+    classDef accent fill:#f43f5e,stroke:#e11d48,stroke-width:2px,color:#fff;
+    classDef database fill:#0f172a,stroke:#334155,stroke-width:2px,color:#94a3b8;
+
+    %% Nodes
+    User([Traveler User]) -->|1. Register/Login| Auth[JWT Auth Middleware]
+    User -->|2. Create Trip Form| API_Gen[AI Generator Route]
+    
+    subgraph Express Backend
+        API_Gen -->|3. Call Gemini| Gemini[Gemini 1.5 Flash AI Engine]
+        Gemini -->|4. Parse Itinerary Days, Packing, Hotels| DB[(SQLite / PostgreSQL DB)]
+        
+        API_Weather[Weather Adaptation Engine] -->|Check Forecast| Weather[OpenWeather API / Simulation]
+        API_Weather -->|5. Replace Outdoor Activities| Gemini
+        
+        API_Expense[Expense Split & Tracker] -->|6. Calculate splits / categories| DB
+        API_Expense -->|7. Exceed Limit Alert| Notify[Notification Dispatcher]
+    end
+
+    subgraph Next.js Frontend
+        Dashboard[Glassmorphic Dashboard] -->|Show stats / saved trips| User
+        Itinerary[Interactive Timeline Canvas] -->|Display Slots & Maps| User
+        Chat[Contextual AI Chat Advisor] -->|Conversational advice| User
+    end
+
+    DB -->|Fetch current status| Dashboard
+    DB -->|Render timeline| Itinerary
+    Notify -->|Real-time alert popups| Dashboard
+    
+    class API_Gen,API_Weather,API_Expense primary;
+    class Gemini,Weather secondary;
+    class Dashboard,Itinerary,Chat,Notify accent;
+    class DB database;
+```
+
+### User Sequence Flow
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Traveler as Traveler
+    participant App as Next.js Frontend
+    participant Server as Express Backend
+    participant AI as Gemini AI Engine
+
+    Traveler->>App: Open Landing Page
+    Traveler->>App: Register / Login (JWT Saved)
+    App->>Traveler: Render Glassmorphic Dashboard
+    Traveler->>App: Fill AI Generator Form (Destination, Budget, Dates)
+    App->>Server: POST /api/trips/generate
+    Server->>AI: Query complete structured Itinerary & Packing List
+    AI-->>Server: Return structured JSON
+    Server->>Server: Store Trip, Itinerary, Hotels & Packing items in DB
+    Server-->>App: Return generated Trip object
+    App->>Traveler: Redirect to /trips/[id] timeline canvas
+    
+    Note over Traveler, App: Travel Operations
+    Traveler->>App: Toggle Packing Items / Upvote activities
+    Traveler->>App: Record Expense (e.g. Food purchase)
+    App->>Server: POST /api/expenses/:tripId
+    Server-->>App: Return updated total & split calculations
+    
+    Note over Traveler, App: Weather adaptation
+    Traveler->>App: Trigger Weather Simulator (Heavy Rain)
+    App->>Server: POST /api/trips/:id/weather-adapt
+    Server->>AI: Request indoor replacements for weather-sensitive activities
+    AI-->>Server: Return indoor activities
+    Server->>Server: Update DB & Generate System Notification
+    Server-->>App: Push adapted activities & weather alerts
+    App->>Traveler: Re-render timeline with [Indoor Backup] tags
+```
 
 ---
 
@@ -96,7 +176,7 @@ d:/travel
 
 ---
 
-## How to Test VoyageAI Features
+## How to Test TravelMitra Features
 
 1. **Landing & Account Registration**:
    - Go to `http://localhost:3000` and view the premium glassmorphism landing screen.
