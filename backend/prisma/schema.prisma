@@ -1,0 +1,168 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  passwordHash  String
+  name          String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  trips         Trip[]         @relation("TripOrganizer")
+  sharedTrips   SharedTrip[]
+  votes         Vote[]
+  chatHistory   ChatHistory[]
+  expenses      Expense[]      @relation("ExpensePayer")
+  notifications Notification[]
+}
+
+model Trip {
+  id              String         @id @default(uuid())
+  title           String
+  destination     String
+  startDate       DateTime
+  endDate         DateTime
+  budgetLimit     Float
+  travelStyle     String         // Solo, Couple, Family, Backpacker, Nomad, etc.
+  interests       String         // Comma-separated list (e.g. "adventure,culture")
+  foodPreference  String
+  travelerCount   Int            @default(1)
+  organizerId     String
+  organizer       User           @relation("TripOrganizer", fields: [organizerId], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  itineraryDays   ItineraryDay[]
+  expenses        Expense[]
+  packingItems    PackingItem[]
+  sharedWith      SharedTrip[]
+  votes           Vote[]
+  notifications   Notification[]
+}
+
+model ItineraryDay {
+  id             String       @id @default(uuid())
+  tripId         String
+  trip           Trip         @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  dayNumber      Int
+  date           DateTime
+  weatherSummary String?
+  activities     Activity[]
+  restaurants    Restaurant[]
+}
+
+model Activity {
+  id                 String       @id @default(uuid())
+  dayId              String
+  day                ItineraryDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  timeSlot           String       // Morning, Afternoon, Evening, Night
+  title              String
+  description        String
+  locationName       String
+  latitude           Float?
+  longitude          Float?
+  estimatedCost      Float        @default(0)
+  durationMin        Int          @default(60)
+  isIndoorBackup     Boolean      @default(false)
+  isWeatherSensitive Boolean      @default(true)
+  isHiddenGem        Boolean      @default(false)
+}
+
+model Restaurant {
+  id             String       @id @default(uuid())
+  dayId          String
+  day            ItineraryDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  timeSlot       String       // Morning, Afternoon, Evening, Night
+  name           String
+  cuisine        String
+  description    String
+  estimatedCost  Float        @default(0)
+  latitude       Float?
+  longitude      Float?
+  isHiddenGem    Boolean      @default(false)
+}
+
+model Hotel {
+  id             String   @id @default(uuid())
+  tripId         String
+  name           String
+  rating         Float?
+  pricePerNight  Float
+  address        String
+  latitude       Float?
+  longitude      Float?
+  checkIn        DateTime
+  checkOut       DateTime
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  tripId      String
+  trip        Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  payerId     String
+  payer       User     @relation("ExpensePayer", fields: [payerId], references: [id])
+  amount      Float
+  currency    String   @default("USD")
+  category    String   // Food, Accommodation, Transport, Shopping, Activities, Emergency
+  description String
+  date        DateTime @default(now())
+}
+
+model PackingItem {
+  id          String   @id @default(uuid())
+  tripId      String
+  trip        Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  name        String
+  category    String   // Clothing, Gear, Medical, Toiletries, Documents
+  isChecked   Boolean  @default(false)
+  isRequired  Boolean  @default(true)
+}
+
+model SharedTrip {
+  id        String   @id @default(uuid())
+  tripId    String
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   // Viewer, Editor
+  joinedAt  DateTime @default(now())
+}
+
+model Vote {
+  id          String   @id @default(uuid())
+  tripId      String
+  trip        Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemType    String   // Hotel, Activity, Destination
+  itemId      String   // The ID of the item being voted on
+  voteValue   Int      @default(1) // 1 = Upvote, -1 = Downvote
+  createdAt   DateTime @default(now())
+}
+
+model ChatHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   String
+  response  String
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tripId    String?
+  trip      Trip?    @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  type      String   // WeatherAlert, FlightReminder, BudgetAlert, GroupUpdate
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
